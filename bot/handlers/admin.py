@@ -15,11 +15,19 @@ async def cmd_admin(message: Message):
         await message.answer("У вас нет доступа к админке.")
         return
     
-    user_count = (await db.connection.execute('SELECT COUNT(*) FROM users')).fetchone()[0]
-    active_subscriptions_count = (await db.connection.execute('''
+    cursor = await db.connection.execute('SELECT COUNT(*) FROM users')
+    row = await cursor.fetchone()
+    user_count = row[0] if row else 0
+
+    cursor = await db.connection.execute('''
         SELECT COUNT(*) FROM users WHERE subscription_expires_at IS NOT NULL AND subscription_expires_at > ?
-    ''', (datetime.datetime.now().isoformat(),))).fetchone()[0]
-    total_devices_count = (await db.connection.execute('SELECT COUNT(*) FROM devices')).fetchone()[0]
+    ''', (datetime.datetime.now().isoformat(),))
+    row = await cursor.fetchone()
+    active_subscriptions_count = row[0] if row else 0
+
+    cursor = await db.connection.execute('SELECT COUNT(*) FROM devices')
+    row = await cursor.fetchone()
+    total_devices_count = row[0] if row else 0
     
     admin_text = (
         f"Админка\n"
