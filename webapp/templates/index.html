@@ -3,57 +3,91 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>just1kbot Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>just1k bot test</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-    <main class="mx-auto max-w-xl p-4 pb-20">
-        <header class="mb-5 flex items-center justify-between">
-            <div><p class="text-sm text-cyan-300">🔐 just1kbot</p><h1 class="text-2xl font-bold">Мои устройства</h1></div>
-            <button id="refresh-button" class="rounded-full bg-slate-800 px-3 py-2">↻</button>
+<body class="min-h-screen bg-slate-950 text-slate-100 p-4">
+    <main class="max-w-md mx-auto">
+        <!-- Шапка -->
+        <header class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🔒 Мои устройства
+            </h1>
+            <button id="refresh-button" class="rounded-full bg-slate-800 px-3 py-2 text-xl hover:bg-slate-700 transition">↻</button>
         </header>
 
-        <section id="subscription-card" class="mb-4 rounded-3xl border border-cyan-500/20 bg-slate-900 p-5 shadow-lg shadow-cyan-950/30"></section>
-        <section class="mb-4 flex items-center justify-between"><h2 id="devices-title" class="text-lg font-semibold">Устройства</h2><span id="limit-pill" class="rounded-full bg-slate-800 px-3 py-1 text-sm"></span></section>
-        <div id="empty-state" class="hidden rounded-3xl border border-dashed border-slate-700 bg-slate-900/70 p-8 text-center"><div class="mb-3 text-5xl">📱</div><h3 class="text-xl font-semibold">У вас пока нет устройств</h3><p class="mt-2 text-slate-400">Создайте первое устройство, чтобы подключиться к VPN.</p></div>
-        <div id="device-cards" class="space-y-3"></div>
-        <button id="add-device-button" class="mt-5 w-full rounded-2xl bg-cyan-400 px-4 py-4 font-bold text-slate-950">+ Создать устройство</button>
+        <!-- Подписка -->
+        <section id="subscription-card" class="mb-6 rounded-3xl border border-cyan-500/20 bg-slate-900 p-5 shadow-lg">
+            <!-- Загружается динамически -->
+        </section>
+
+        <!-- Заголовок секции устройств -->
+        <section class="mb-4 flex items-center justify-between">
+            <h2 id="devices-title" class="text-lg font-semibold">Устройства</h2>
+            <button id="add-device-button" class="rounded-full bg-cyan-400 px-4 py-1.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 transition">Можно добавить</button>
+        </section>
+
+        <!-- Сетка устройств -->
+        <div id="device-cards" class="grid gap-4">
+            <!-- Загружается динамически -->
+        </div>
+
+        <!-- Пустой экран -->
+        <div id="empty-state" class="hidden text-center py-12 text-slate-400">
+            <div class="mb-3 text-5xl">📱</div>
+            <h3 class="text-xl font-semibold text-slate-200">У вас пока нет устройств</h3>
+            <p class="text-sm mt-1">Нажмите кнопку выше, чтобы добавить</p>
+        </div>
     </main>
+
+    <!-- Модалка: Добавление устройства -->
+    <div id="add-device-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
+        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 border border-slate-800">
+            <h2 class="mb-3 text-xl font-bold">Добавить устройство</h2>
+            <p class="mb-2 text-sm text-slate-400">Выберите локацию:</p>
+            <div id="server-list" class="grid gap-2 mb-4 max-h-40 overflow-auto">
+                <!-- Загружается динамически -->
+            </div>
+            <input id="device-name" class="w-full rounded-2xl bg-slate-800 p-4 outline-none border border-slate-700 focus:border-cyan-400 text-slate-100" placeholder="📱 iPhone, 💻 Laptop">
+            <div class="mt-4 grid grid-cols-2 gap-2">
+                <button data-close="add-device-modal" class="rounded-2xl bg-slate-800 p-4 font-semibold">Отмена</button>
+                <button id="create-device-button" class="rounded-2xl bg-cyan-400 p-4 font-bold text-slate-950">Создать</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Модальное окно QR-кода -->
     <div id="qr-code-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
-        <div class="w-full max-w-sm rounded-3xl bg-white p-5 text-slate-900">
+        <div class="w-full max-w-sm rounded-3xl bg-white p-5 text-slate-900 shadow-2xl">
             <h2 class="mb-2 text-xl font-bold">📱 QR-код</h2>
             <p class="mb-4 text-sm text-slate-500">Отсканируйте в приложении AmneziaWG / WireGuard</p>
             <div id="qr-code" class="flex justify-center p-2 bg-white rounded-xl"></div>
-            <button data-close="qr-code-modal" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 text-white">Закрыть</button>
+            <button data-close="qr-code-modal" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 text-white font-semibold">Закрыть</button>
         </div>
     </div>
 
     <!-- Модальное окно временной ссылки -->
     <div id="share-link-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
-        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5">
+        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 border border-slate-800">
             <h2 class="mb-3 text-xl font-bold">🔗 Временная ссылка</h2>
-            <input id="share-link-input" class="mb-3 w-full rounded-xl bg-slate-800 p-3" readonly>
-            <button id="copy-share-link-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать</button>
-            <button data-close="share-link-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button>
+            <input id="share-link-input" class="mb-3 w-full rounded-xl bg-slate-800 p-3 text-sm font-mono text-cyan-400" readonly>
+            <button id="copy-share-link-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950 hover:bg-cyan-300 transition">Скопировать</button>
+            <button data-close="share-link-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3 font-semibold">Закрыть</button>
         </div>
     </div>
 
     <!-- Модальное окно текстового конфига для мобилок -->
     <div id="config-text-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
-        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 text-slate-100">
+        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 text-slate-100 border border-slate-800">
             <h2 class="mb-3 text-xl font-bold">📄 Текст конфигурации</h2>
-            <p class="mb-2 text-xs text-slate-400">Мобильный Telegram блокирует скачивание файлов. Скопируйте текст ниже и импортируйте его в приложение как текст:</p>
-            <textarea id="config-text" class="mb-3 w-full h-48 rounded-xl bg-slate-800 p-3 text-xs font-mono" readonly></textarea>
-            <button id="copy-config-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать весь текст</button>
-            <button data-close="config-text-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button>
+            <p class="mb-2 text-xs text-slate-400">Мобильный Telegram блокирует скачивание файлов. Скопируйте текст ниже и импортируйте его в приложение:</p>
+            <textarea id="config-text" class="mb-3 w-full h-48 rounded-xl bg-slate-800 p-3 text-xs font-mono border border-slate-700 outline-none" readonly></textarea>
+            <button id="copy-config-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950 hover:bg-cyan-300 transition">Скопировать весь текст</button>
+            <button data-close="config-text-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3 font-semibold">Закрыть</button>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
     const tg = window.Telegram?.WebApp;
     const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(location.search).get('user_id');
@@ -111,14 +145,14 @@
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
 
-        // Если открыто на мобилке внутри Telegram — сразу показываем текстовую модалку, не пытаясь скачать файл
+        // Если это мобилка — не пытаемся скачать, сразу кидаем в текстовую модалку
         if (tg && tg.platform !== 'desktop' && tg.platform !== 'macos') {
             document.getElementById('config-text').value = d.config_text;
             openModal('config-text-modal');
             return;
         }
 
-        // Логика скачивания файла для ПК
+        // Логика скачивания файла (только для ПК)
         try {
             const blob = new Blob([d.config_text], {type: 'text/plain'});
             const a = document.createElement('a');
@@ -128,7 +162,6 @@
             URL.revokeObjectURL(a.href);
         } catch (e) {}
 
-        // На десктопе тоже откроем модалку как запасной вариант
         document.getElementById('config-text').value = d.config_text;
         openModal('config-text-modal');
     }
@@ -144,24 +177,54 @@
 
     function renderDashboard() {
         const devices = dashboard.devices || [];
-        document.getElementById('subscription-card').innerHTML = `<h2 class="mb-3 font-semibold">📊 Ваша подписка</h2><p>Статус: ${dashboard.subscription_active ? '✅ Активна' : '❌ Неактивна'}</p><p>До: ${fmtDate(dashboard.subscription_expires_at)}</p>`;
+        document.getElementById('subscription-card').innerHTML = `
+            <h2 class="mb-3 font-semibold text-cyan-400 flex items-center gap-2">📊 Ваша подписка</h2>
+            <p class="text-sm">Статус: ${dashboard.subscription_active ? '<span class="text-green-400 font-bold">✅ Активна</span>' : '<span class="text-red-400 font-bold">❌ Неактивна</span>'}</p>
+            <p class="text-sm text-slate-400 mt-1">До: ${fmtDate(dashboard.subscription_expires_at)}</p>
+        `;
         document.getElementById('devices-title').textContent = `Устройства (${devices.length}/${dashboard.device_limit})`;
-        document.getElementById('limit-pill').textContent = devices.length >= dashboard.device_limit ? 'Лимит достигнут' : 'Можно добавить';
+        
         document.getElementById('empty-state').classList.toggle('hidden', devices.length !== 0);
         const add = document.getElementById('add-device-button');
-        add.disabled = !dashboard.subscription_active || devices.length >= dashboard.device_limit;
-        add.classList.toggle('opacity-50', add.disabled);
-        document.getElementById('device-cards').innerHTML = devices.map(d => `<article class="rounded-3xl bg-slate-900 p-4"><div class="mb-3 flex justify-between"><div><p class="text-lg font-bold">${d.server_flag || '🌐'} ${d.server_name || 'Сервер'}</p><p class="text-slate-300">${d.name}</p><p class="text-xs text-slate-500">Создано: ${fmtDate(d.created_at)}</p></div><button onclick="renameDevice(${d.id}, '${d.name.replace(/'/g, "")}')">✏️</button></div><div class="grid grid-cols-2 gap-2"><button onclick="copyConfig(${d.id})" class="rounded-xl bg-slate-800 p-3">📋 Ключ</button><button onclick="downloadConfig(${d.id})" class="rounded-xl bg-slate-800 p-3">⬇️ Конфиг</button><button onclick="showQr(${d.id})" class="rounded-xl bg-slate-800 p-3">📱 QR</button><button onclick="shareDevice(${d.id})" class="rounded-xl bg-slate-800 p-3">🔗 1 час</button></div><button onclick="deleteDevice(${d.id})" class="mt-2 w-full rounded-xl bg-red-500/20 p-3 text-red-200">🗑 Удалить</button></article>`).join('');
+        if (add) {
+            add.disabled = !dashboard.subscription_active || devices.length >= dashboard.device_limit;
+            add.classList.toggle('opacity-50', add.disabled);
+        }
+        
+        document.getElementById('device-cards').innerHTML = devices.map(d => `
+            <article class="rounded-3xl bg-slate-900 p-5 border border-slate-800 shadow-md">
+                <div class="mb-4 flex justify-between items-start">
+                    <div>
+                        <p class="text-lg font-bold text-slate-100">${d.server_flag || '🌐'} ${d.server_name || 'Сервер'}</p>
+                        <p class="text-slate-400 text-sm mt-0.5">${d.name}</p>
+                        <p class="text-xs text-slate-500 mt-2">Создано: ${fmtDate(d.created_at)}</p>
+                    </div>
+                    <button class="text-slate-400 hover:text-cyan-400 p-1" onclick="renameDevice(${d.id}, '${d.name.replace(/'/g, "")}')">✏️</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="copyConfig(${d.id})" class="rounded-xl bg-slate-800 p-3 hover:bg-slate-700 font-semibold text-sm transition">📋 Ключ</button>
+                    <button onclick="downloadConfig(${d.id})" class="rounded-xl bg-slate-800 p-3 hover:bg-slate-700 font-semibold text-sm transition">⬇️ Конфиг</button>
+                    <button onclick="showQr(${d.id})" class="rounded-xl bg-slate-800 p-3 hover:bg-slate-700 font-semibold text-sm transition">📱 QR</button>
+                    <button onclick="shareDevice(${d.id})" class="rounded-xl bg-slate-800 p-3 hover:bg-slate-700 font-semibold text-sm transition">🔗 1 час</button>
+                </div>
+                <button onclick="deleteDevice(${d.id})" class="mt-3 w-full rounded-xl bg-red-500/10 p-3 text-red-400 hover:bg-red-500/20 text-sm font-semibold transition border border-red-500/20">🗑 Удалить</button>
+            </article>
+        `).join('');
     }
 
     async function loadServers() { 
         const servers = await (await api('/api/servers')).json(); 
         const box = document.getElementById('server-list'); 
-        box.innerHTML = servers.map(s => `<button data-server="${s.id}" class="server-btn w-full rounded-2xl border border-slate-700 p-4 text-left">${s.flag || '🌐'} ${s.name} <span class="text-sm text-slate-400">${s.bandwidth_label || ''} ${s.online ? '● online' : '● offline'}</span></button>`).join(''); 
+        box.innerHTML = servers.map(s => `
+            <button data-server="${s.id}" class="server-btn w-full rounded-2xl border border-slate-700 p-4 text-left hover:border-slate-500 transition flex justify-between items-center bg-slate-950">
+                <span>${s.flag || '🌐'} ${s.name}</span>
+                <span class="text-xs ${s.online ? 'text-green-400' : 'text-red-400'} font-medium">● ${s.online ? 'online' : 'offline'}</span>
+            </button>
+        `).join(''); 
         box.querySelectorAll('.server-btn').forEach(b => b.onclick = () => { 
             selectedServerId = b.dataset.server; 
-            box.querySelectorAll('button').forEach(x => x.classList.remove('border-cyan-400')); 
-            b.classList.add('border-cyan-400'); 
+            box.querySelectorAll('button').forEach(x => x.classList.remove('border-cyan-400', 'bg-slate-900')); 
+            b.classList.add('border-cyan-400', 'bg-slate-900'); 
         }); 
     }
 
@@ -169,7 +232,7 @@
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
 
     async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
-    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return toast('Выберите сервер и введите название'); await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
+    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return; await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
     async function deleteDevice(id) { if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return; await api(`/api/devices/${id}`, {method:'DELETE'}); await loadDashboard(); }
 
     if (document.getElementById('add-device-button')) {
