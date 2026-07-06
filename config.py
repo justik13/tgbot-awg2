@@ -12,8 +12,13 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
-    @field_validator('ADMIN_IDS')
+    @field_validator("ADMIN_IDS", mode="before")
+    @classmethod
     def _validate_admin_ids(cls, v):
-        return [int(id) for id in v.split(',')]
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split(",") if x.strip()]
+        if isinstance(v, int):
+            return [v]
+        return v
 
 settings = Settings()
