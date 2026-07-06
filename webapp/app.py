@@ -6,6 +6,14 @@ from database import db
 from amnezia_client import AmneziaClient
 from webapp.security import telegram_auth_required
 
+AMNEZIA_CLIENTS = {}
+
+def get_amnezia_client(server: dict) -> AmneziaClient:
+    server_id = server['id']
+    if server_id not in AMNEZIA_CLIENTS:
+        AMNEZIA_CLIENTS[server_id] = AmneziaClient(server['api_url'], server['api_key'])
+    return AMNEZIA_CLIENTS[server_id]
+
 app = Flask(__name__)
 
 
@@ -52,7 +60,8 @@ async def get_servers():
     servers = await db.get_active_servers()
     payload = []
     for server in servers:
-        status = await AmneziaClient(server['api_url'], server['api_key']).check_status()
+        client = get_amnezia_client(server)
+        status = await client.check_status()
         payload.append({
             "id": server['id'],
             "name": server['name'],
@@ -89,7 +98,7 @@ async def create_device():
         return jsonify({"error": "Server not found"}), 404
 
     amnezia_client_id = f"tg_{user_id}_{uuid.uuid4().hex[:8]}"
-    client = AmneziaClient(server['api_url'], server['api_key'])
+    client = get_amnezia_client(server)
     config_text = await client.create_vpn_profile(amnezia_client_id)
     if not config_text:
         return jsonify({"error": "Failed to create VPN profile"}), 500
@@ -123,7 +132,8 @@ async def delete_device(device_id):
 
     server = await db.get_server(device['server_id'])
     if server:
-        await AmneziaClient(server['api_url'], server['api_key']).delete_vpn_profile(device['amnezia_client_id'])
+        client = get_amnezia_client(server)
+        await client.delete_vpn_profile(device['amnezia_client_id'])
     await db.delete_device(device_id)
     return jsonify({"status": "Device deleted successfully"})
 
