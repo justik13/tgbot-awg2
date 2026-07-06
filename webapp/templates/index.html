@@ -140,6 +140,11 @@
         node.innerHTML = '<p class="text-center">Загрузка...</p>';
         openModal('qr-code-modal');
 
+        if (window.qrInterval) {
+            clearInterval(window.qrInterval);
+            delete window.qrInterval;
+        }
+
         api(`/api/devices/${id}/qr`, { method: 'GET' })
             .then(res => {
                 if (res.ok) {
@@ -149,8 +154,17 @@
                 }
             })
             .then(data => {
-                const qrData = data.qr || d.config_text;
-                node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(qrData)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+                if (data.qr_images && Array.isArray(data.qr_images)) {
+                    let currentIndex = 0;
+                    node.innerHTML = `<img src="${encodeURIComponent(data.qr_images[currentIndex])}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+                    window.qrInterval = setInterval(() => {
+                        currentIndex = (currentIndex + 1) % data.qr_images.length;
+                        node.innerHTML = `<img src="${encodeURIComponent(data.qr_images[currentIndex])}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+                    }, 1000);
+                } else {
+                    const qrData = data.qr || d.config_text;
+                    node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(qrData)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+                }
             })
             .catch(() => {
                 node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(d.config_text)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
