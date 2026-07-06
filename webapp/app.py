@@ -92,12 +92,17 @@ async def get_device_qr(device_id):
         client = get_amnezia_client(server)
         # Получаем официальную ссылку Amnezia
         vpn_link = await client.get_amnezia_link(device['amnezia_client_id'])
-        if vpn_link:
-            return jsonify({"qr": vpn_link})
-    except Exception as e:
-        app.logger.error(f"Error fetching official Amnezia link: {e}")
+        if not vpn_link:
+            return jsonify({"error": "Failed to fetch official Amnezia link"}), 500
 
-    return jsonify({"error": "Failed to fetch official Amnezia link"}), 500
+        # Генерируем QR код
+        qr_res = await client.get_native_qr(vpn_link)
+        if 'items' in qr_res:
+            return jsonify({"qr_images": qr_res['items']})
+
+    except Exception as e:
+        app.logger.error(f"Failed to generate official animated QR: {e}")
+        return jsonify({"error": "Failed to generate official animated QR"}), 500
 
 
 @app.route('/api/servers', methods=['GET'])
