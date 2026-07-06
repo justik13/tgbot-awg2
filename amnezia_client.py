@@ -133,3 +133,7 @@ class AmneziaClient:
 
     async def delete_vpn_profile(self, client_id: str) -> bool:
         return await self.delete_user(client_id)
+
+    async def get_native_qr(self, config_text: str) -> Optional[dict]:
+        logger.info("Запрашиваю официальную серию QR-кодов у amnezia-api")
+        return await self._request("POST", "/clients/qr", json={"config": config_text})
