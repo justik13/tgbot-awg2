@@ -68,6 +68,8 @@
                 window.Telegram.WebApp.expand();
             }
 
+            const addDeviceButton = document.getElementById('add-device-button');
+
             // Fetch subscription status
             const subscriptionResponse = await fetch('/api/dashboard', {
                 headers: { 'X-TG-User-Id': user_id }
@@ -133,7 +135,6 @@
                 });
 
                 // Disable add device button if limit is reached
-                const addDeviceButton = document.getElementById('add-device-button');
                 if (devicesData.length >= subscriptionData.device_limit) {
                     addDeviceButton.disabled = true;
                     addDeviceButton.textContent = 'Достигнут лимит';
