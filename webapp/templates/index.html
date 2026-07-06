@@ -134,13 +134,31 @@
     }
 
     async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
-    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return; await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
+    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return toast('Выберите сервер и введите название'); await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
     async function deleteDevice(id) { if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return; await api(`/api/devices/${id}`, {method:'DELETE'}); await loadDashboard(); }
 
     document.getElementById('refresh-button').onclick = loadDashboard;
     document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
     document.getElementById('copy-config-button').onclick = () => copy(document.getElementById('config-text').value);
     document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+
+    if (document.getElementById('add-device-button')) {
+        document.getElementById('add-device-button').onclick = async () => {
+            await loadServers();
+            openModal('add-device-modal');
+        };
+    }
+
+    if (document.getElementById('create-device-button')) {
+        document.getElementById('create-device-button').onclick = async () => {
+            const name = document.getElementById('device-name').value.trim();
+            if (!selectedServerId || !name) return toast('Выберите сервер и введите название');
+            const res = await api('/api/devices', {method:'POST', body: JSON.stringify({server_id:selectedServerId, name})});
+            if (!res.ok) return toast((await res.json()).error || 'Ошибка создания');
+            closeModal('add-device-modal');
+            await loadDashboard();
+        };
+    }
 
     loadDashboard();
     </script>
