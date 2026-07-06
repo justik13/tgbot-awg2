@@ -1,10 +1,8 @@
 import datetime
 from typing import Optional
+from config import settings
 
 class UsersMixin:
-    def __init__(self, connection):
-        self.connection = connection
-
     async def add_or_update_user(self, user_id: int, username: str, default_limit: int, is_admin: int = 0):
         if user_id in settings.ADMIN_IDS:
             is_admin = 1
