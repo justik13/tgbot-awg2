@@ -145,6 +145,20 @@ class AmneziaClient:
     async def delete_vpn_profile(self, client_id: str) -> bool:
         return await self.delete_user(client_id)
 
+    async def get_amnezia_link(self, username_or_id: str) -> Optional[str]:
+        session = await self._get_session()
+        url = f"{self.base_url}/clients/{username_or_id}/config"
+        try:
+            async with session.get(url) as resp:
+                if resp.status == 200 and "application/json" in resp.headers.get("Content-Type", ""):
+                    data = await resp.json()
+                    return data.get("config") or data.get("client", {}).get("config")
+                else:
+                    logger.error(f"Ошибка при получении amnezia-ссылки: {resp.status} {await resp.text()}")
+        except Exception as e:
+            logger.error(f"Ошибка при получении amnezia-ссылки: {e}")
+        return None
+
     async def get_native_qr(self, config_text: str) -> Optional[dict]:
         logger.info("Запрашиваю официальную серию QR-кодов у amnezia-api")
         return await self._request("POST", "/clients/qr", json={"config": config_text})
