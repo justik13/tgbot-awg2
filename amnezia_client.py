@@ -24,7 +24,18 @@ class AmneziaClient:
         }
 
     async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
+        loop_mismatch = False
+        if self._session and not self._session.closed:
+            session_loop = getattr(self._session, '_loop', None)
+            if session_loop and (session_loop.is_closed() or session_loop != current_loop):
+                loop_mismatch = True
+
+        if self._session is None or self._session.closed or loop_mismatch:
             connector = aiohttp.TCPConnector(ssl=False)
             self._session = aiohttp.ClientSession(
                 headers=self._get_headers(),
