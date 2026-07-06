@@ -15,7 +15,8 @@ def get_tg_user_id(req):
 
 @app.before_request
 async def before_request():
-    await db.connect()
+    if not db.connection:
+        await db.connect()
 
 @app.route('/api/dashboard', methods=['GET'])
 async def get_dashboard():
