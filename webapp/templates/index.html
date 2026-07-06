@@ -117,28 +117,28 @@
         if (d) await copy(d.config_text);
     }
 
-    function showQr(id) { 
+    function showQr(id) {
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
-        const node = document.getElementById('qr-code'); 
-        node.innerHTML = ''; 
-        openModal('qr-code-modal'); 
-        new QRCode(node, { text: d.config_text, width: 200, height: 200 }); 
+        const node = document.getElementById('qr-code');
+        node.innerHTML = '';
+        openModal('qr-code-modal');
+        new QRCode(node, { text: d.config_text, width: 200, height: 200 });
     }
 
-    function downloadConfig(id) { 
-        const d = dashboard.devices.find(x => x.id === id); 
+    function downloadConfig(id) {
+        const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
         try {
-            const blob = new Blob([d.config_text], {type: 'text/plain'}); 
-            const a = document.createElement('a'); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = `${d.name}.conf`; 
-            a.click(); 
-            URL.revokeObjectURL(a.href); 
+            const blob = new Blob([d.config_text], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${d.name}.conf`;
+            a.click();
+            URL.revokeObjectURL(a.href);
         } catch (e) {}
-        document.getElementById('config-text').value = d.config_text; 
-        openModal('config-text-modal'); 
+        document.getElementById('config-text').value = d.config_text;
+        openModal('config-text-modal');
     }
 
     async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
