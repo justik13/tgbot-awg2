@@ -47,12 +47,8 @@ async def get_dashboard():
 
     devices = await db.get_user_devices(user_id)
     for d in devices:
-        server = await db.get_server(d['server_id'])
-        if server:
-            client = get_amnezia_client(server)
-            qr_res = await client.get_native_qr(d['config_text'])
-            if qr_res and qr_res.get('items'):
-                d['amnezia_qr'] = qr_res['items'][0]
+        # Временно возвращаем исходный текст, чтобы убрать сетевые лаги
+        d['amnezia_qr'] = d['config_text']
 
     return jsonify({
         "subscription_expires_at": user['subscription_expires_at'],
@@ -114,11 +110,7 @@ async def create_device():
     device_id = await db.add_device(user_id, server['id'], name, amnezia_client_id, config_text)
     device = await db.get_device(device_id)
     
-    client = get_amnezia_client(server)
-    qr_res = await client.get_native_qr(device['config_text'])
-    if qr_res and qr_res.get('items'):
-        device['amnezia_qr'] = qr_res['items'][0]
-        
+    device['amnezia_qr'] = device['config_text']
     return jsonify({"status": "Device created successfully", "device": device}), 201
 
 
