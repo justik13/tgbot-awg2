@@ -5,7 +5,7 @@ import datetime
 class DevicesMixin:
     async def add_device(self, user_id: int, server_id: int, name: str, amnezia_client_id: str, config_text: str) -> int:
         encrypted_config_text = self._encrypt(config_text)
-        created_at = datetime.datetime.now().isoformat()
+        created_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None).isoformat()
         cursor = await self.connection.execute('''
             INSERT INTO devices (user_id, server_id, name, amnezia_client_id, config_text, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -53,7 +53,7 @@ class DevicesMixin:
         await self.connection.commit()
 
     async def create_temporary_link(self, device_id: int, token: str, expires_at: str):
-        await self.connection.execute('DELETE FROM temporary_links WHERE device_id = ? OR expires_at <= ?', (device_id, datetime.datetime.now().isoformat()))
+        await self.connection.execute('DELETE FROM temporary_links WHERE device_id = ? OR expires_at <= ?', (device_id, datetime.datetime.now(datetime.UTC).replace(tzinfo=None).isoformat()))
         await self.connection.execute('''
             INSERT INTO temporary_links (device_id, token, expires_at)
             VALUES (?, ?, ?)
@@ -66,6 +66,6 @@ class DevicesMixin:
         if not row:
             return None
         expires_at = datetime.datetime.fromisoformat(row['expires_at'])
-        if expires_at <= datetime.datetime.now():
+        if expires_at <= datetime.datetime.now(datetime.UTC).replace(tzinfo=None):
             return None
         return await self.get_device(row['device_id'])

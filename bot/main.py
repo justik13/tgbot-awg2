@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import logging
+import contextlib
 from aiogram import Bot, Dispatcher
 from config import settings
 from database import db
@@ -16,7 +17,7 @@ async def sub_checker_worker():
     while True:
         await asyncio.sleep(3600)
         try:
-            cutoff_time = (datetime.datetime.now() - datetime.timedelta(hours=12)).isoformat()
+            cutoff_time = (datetime.datetime.now(datetime.UTC).replace(tzinfo=None) - datetime.timedelta(hours=12)).isoformat()
             cursor = await db.connection.execute('''
                 SELECT * FROM users WHERE subscription_expires_at IS NOT NULL AND subscription_expires_at < ?
             ''', (cutoff_time,))
@@ -58,6 +59,7 @@ async def sub_checker_worker():
             logger.error("Критическая ошибка в цикле воркера проверки подписок: %s", worker_error)
 
 async def main():
+    logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     await db.connect()
     await db.init_db()
 
@@ -67,11 +69,15 @@ async def main():
     dp.include_router(billing_router)
     dp.include_router(admin_router)
 
-    asyncio.create_task(sub_checker_worker())
+    checker_task = asyncio.create_task(sub_checker_worker())
 
     try:
         await dp.start_polling(bot)
     finally:
+        checker_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await checker_task
+        await bot.session.close()
         await db.disconnect()
 
 if __name__ == "__main__":

@@ -33,10 +33,10 @@ class UsersMixin:
     async def update_subscription(self, user_id: int, days: int):
         cursor = await self.connection.execute('SELECT subscription_expires_at FROM users WHERE id = ?', (user_id,))
         row = await cursor.fetchone()
-        if row and row['subscription_expires_at'] and datetime.datetime.fromisoformat(row['subscription_expires_at']) > datetime.datetime.now():
+        if row and row['subscription_expires_at'] and datetime.datetime.fromisoformat(row['subscription_expires_at']) > datetime.datetime.now(datetime.UTC).replace(tzinfo=None):
             base_date = datetime.datetime.fromisoformat(row['subscription_expires_at'])
         else:
-            base_date = datetime.datetime.now()
+            base_date = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
         new_expiry_date = base_date + datetime.timedelta(days=days)
         await self.connection.execute('''
