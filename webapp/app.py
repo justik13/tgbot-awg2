@@ -45,42 +45,45 @@ async def get_servers():
 
 @app.route('/api/devices', methods=['POST'])
 async def create_device():
-    user_id = get_tg_user_id(request)
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    
-    data = request.get_json()
-    server_id = data.get('server_id')
-    name = data.get('name')
-    
-    if not server_id or not name:
-        return jsonify({"error": "Server ID and device name are required"}), 400
-    
-    user_devices_count = await db.get_user_devices_count(user_id)
-    user = await db.get_user(user_id)
-    
-    if user_devices_count >= user['device_limit']:
-        return jsonify({"error": "Device limit exceeded"}), 400
-    
-    server = await db.get_server(server_id)
-    if not server:
-        return jsonify({"error": "Server not found"}), 404
-    
-    amnezia_client_id = f"tg_{uuid.uuid4().hex[:8]}"
-    client = AmneziaClient(server['api_url'], server['api_key'])
-    config_text = await client.create_vpn_profile(amnezia_client_id)
-    
-    if not config_text:
-        return jsonify({"error": "Failed to create VPN profile"}), 500
-    
     try:
+        user_id = get_tg_user_id(request)
+        if not user_id:
+            return jsonify({"error": "User ID is required"}), 400
+        
+        data = request.get_json()
+        server_id = data.get('server_id')
+        name = data.get('name')
+        
+        if not server_id or not name:
+            return jsonify({"error": "Server ID and device name are required"}), 400
+        
+        user_devices_count = await db.get_user_devices_count(user_id)
+        user = await db.get_user(user_id)
+        
+        if user_devices_count >= user['device_limit']:
+            return jsonify({"error": "Device limit exceeded"}), 400
+        
+        server = await db.get_server(server_id)
+        if not server:
+            return jsonify({"error": "Server not found"}), 404
+        
+        amnezia_client_id = f"tg_{uuid.uuid4().hex[:8]}"
+        client = AmneziaClient(server['api_url'], server['api_key'])
+        
+        print(f"[DEBUG] Отправляем запрос на Amnezia API: {server['api_url']}")
+        config_text = await client.create_vpn_profile(amnezia_client_id)
+        
+        if not config_text:
+            print("[DEBUG] Ошибка: Amnezia API вернул пустой config_text!")
+            return jsonify({"error": "Failed to create VPN profile"}), 500
+        
         await db.add_device(user_id, server_id, name, amnezia_client_id, config_text)
+        return jsonify({"status": "Device created successfully"})
+
     except Exception as e:
-        import traceback
+        print("[CRITICAL ERROR IN CREATE_DEVICE]")
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
-    
-    return jsonify({"status": "Device created successfully"})
 
 @app.route('/api/devices/<int:device_id>', methods=['DELETE'])
 async def delete_device(device_id):
