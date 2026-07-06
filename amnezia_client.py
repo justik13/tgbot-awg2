@@ -11,10 +11,10 @@ RETRY_DELAY = 1.5
 
 class AmneziaClient:
     def __init__(self, base_url: str, api_key: str, protocol: str = "amneziawg2"):
-        self._session = None
         self.base_url = base_url.rstrip("/")
         self.api_key  = api_key
         self.protocol = protocol
+        self._session = None
 
     def _get_headers(self) -> dict:
         return {
@@ -23,26 +23,34 @@ class AmneziaClient:
             "Accept":       "application/json",
         }
 
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            connector = aiohttp.TCPConnector(ssl=False)
+            self._session = aiohttp.ClientSession(
+                headers=self._get_headers(),
+                timeout=REQUEST_TIMEOUT,
+                connector=connector,
+            )
+        return self._session
+
     async def _request(self, method: str, path: str, **kwargs) -> Optional[Any]:
-        session = await self._get_session()
         url = f"{self.base_url}{path}"
-        connector = aiohttp.TCPConnector(ssl=False)
         
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                async with aiohttp.ClientSession(headers=self._get_headers(), timeout=REQUEST_TIMEOUT, connector=connector) as session:
-                    async with session.request(method, url, **kwargs) as resp:
-                        if resp.status in (200, 201, 204):
-                            if method == "DELETE" or resp.status == 204:
-                                return True
-                            ct = resp.headers.get("Content-Type", "")
-                            return await resp.json() if "application/json" in ct else await resp.read()
-                        
-                        text = await resp.text()
-                        logger.warning("API %s %s → %d: %s (попытка %d/%d)",
-                                       method, path, resp.status, text[:300], attempt, MAX_RETRIES)
-                        if resp.status < 500:
-                            return None
+                session = await self._get_session()
+                async with session.request(method, url, **kwargs) as resp:
+                    if resp.status in (200, 201, 204):
+                        if method == "DELETE" or resp.status == 204:
+                            return True
+                        ct = resp.headers.get("Content-Type", "")
+                        return await resp.json() if "application/json" in ct else await resp.read()
+                    
+                    text = await resp.text()
+                    logger.warning("API %s %s → %d: %s (попытка %d/%d)",
+                                   method, path, resp.status, text[:300], attempt, MAX_RETRIES)
+                    if resp.status < 500:
+                        return None
             except aiohttp.ClientConnectorError as e:
                 logger.error("Не удалось подключиться: %s (попытка %d/%d)", e, attempt, MAX_RETRIES)
             except asyncio.TimeoutError:
