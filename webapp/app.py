@@ -46,16 +46,38 @@ async def get_dashboard():
         return jsonify({"error": "User not found"}), 404
 
     devices = await db.get_user_devices(user_id)
-    for d in devices:
-        # Временно возвращаем исходный текст, чтобы убрать сетевые лаги
-        d['amnezia_qr'] = d['config_text']
-
     return jsonify({
         "subscription_expires_at": user['subscription_expires_at'],
         "subscription_active": is_subscription_active(user),
         "device_limit": user['device_limit'],
         "devices": devices,
     })
+
+@app.route('/api/devices/<int:device_id>/qr', methods=['GET'])
+@telegram_auth_required
+async def get_device_qr(device_id):
+    user_id = get_tg_user_id(request)
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+
+    device = await db.get_device(device_id)
+    if not device or device['user_id'] != user_id:
+        return jsonify({"error": "Device not found"}), 404
+
+    server = await db.get_server(device['server_id'])
+    if not server:
+        return jsonify({"error": "Server not found"}), 404
+
+    try:
+        client = get_amnezia_client(server)
+        # Отправляем нативную vpn:// строку в наше официальное API
+        qr_res = await client.get_native_qr(device['config_text'])
+        if qr_res and qr_res.get('items'):
+            return jsonify({"qr": qr_res['items'][0]})
+    except Exception as e:
+        app.logger.error(f"Error generating native QR: {e}")
+
+    return jsonify({"error": "Failed to generate official QR"}), 500
 
 
 @app.route('/api/servers', methods=['GET'])
