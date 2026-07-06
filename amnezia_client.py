@@ -114,7 +114,6 @@ class AmneziaClient:
     async def get_server_load(self) -> Optional[dict]:
         return await self._request("GET", "/server/load")
 
-    # --- СЛОЙ СОВМЕСТИМОСТИ С ТЕКУЩИМ БЭКЕНДОМ И БОТОМ ---
     async def check_status(self) -> Dict[str, object]:
         info = await self.get_server_info()
         if info is not None:
