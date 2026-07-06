@@ -1,6 +1,7 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, g
 import uuid
 import datetime
+import re
 from config import settings
 from database import db
 from amnezia_client import AmneziaClient
@@ -17,14 +18,33 @@ def get_amnezia_client(server: dict) -> AmneziaClient:
 app = Flask(__name__)
 
 
+DEVICE_NAME_RE = re.compile(r"^[\w\s.\-а-яА-ЯёЁ]{1,48}$", re.UNICODE)
+
+
 def get_tg_user_id(req):
-    user_id = req.headers.get('X-TG-User-Id') or req.args.get('user_id')
-    return int(user_id) if user_id else None
+    telegram_user = getattr(g, "telegram_user", None)
+    if telegram_user and telegram_user.get("id"):
+        return int(telegram_user["id"])
+    return None
+
+
+def validate_device_name(name: str) -> str | None:
+    cleaned = " ".join((name or "").strip().split())[:48]
+    return cleaned if DEVICE_NAME_RE.fullmatch(cleaned) else None
+
+
+def safe_config_filename(name: str) -> str:
+    safe_name = re.sub(r"[^\w.\-а-яА-ЯёЁ]+", "_", name, flags=re.UNICODE).strip("._")
+    return f"{safe_name or 'device'}.conf"
+
+
+def utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
 
 def is_subscription_active(user: dict) -> bool:
     value = user.get('subscription_expires_at')
-    return bool(value and datetime.datetime.fromisoformat(value) > datetime.datetime.now())
+    return bool(value and datetime.datetime.fromisoformat(value) > utcnow())
 
 
 @app.before_request
@@ -111,15 +131,18 @@ async def create_device():
         return jsonify({"error": "Active subscription is required"}), 402
 
     data = request.get_json(silent=True) or {}
-    server_id = data.get('server_id')
-    name = (data.get('name') or '').strip()[:48]
+    name = validate_device_name(data.get('name') or '')
+    try:
+        server_id = int(data.get('server_id'))
+    except (TypeError, ValueError):
+        server_id = None
     if not server_id or not name:
-        return jsonify({"error": "Server ID and device name are required"}), 400
+        return jsonify({"error": "Valid server ID and device name are required"}), 400
 
     if await db.get_user_devices_count(user_id) >= user['device_limit']:
         return jsonify({"error": "Device limit exceeded"}), 400
 
-    server = await db.get_server(int(server_id))
+    server = await db.get_server(server_id)
     if not server or not server['is_active']:
         return jsonify({"error": "Server not found"}), 404
 
@@ -144,9 +167,9 @@ async def rename_device(device_id):
     if not user_id or not device or device['user_id'] != user_id:
         return jsonify({"error": "Device not found"}), 404
     data = request.get_json(silent=True) or {}
-    name = (data.get('name') or '').strip()[:48]
+    name = validate_device_name(data.get('name') or '')
     if not name:
-        return jsonify({"error": "Device name is required"}), 400
+        return jsonify({"error": "Valid device name is required"}), 400
     await db.rename_device(device_id, name)
     return jsonify({"status": "Device renamed", "device": await db.get_device(device_id)})
 
@@ -176,7 +199,7 @@ async def share_device(device_id):
         return jsonify({"error": "Device not found"}), 404
 
     token = uuid.uuid4().hex
-    expires_at = (datetime.datetime.now() + datetime.timedelta(hours=1)).isoformat()
+    expires_at = (utcnow() + datetime.timedelta(hours=1)).isoformat()
     await db.create_temporary_link(device_id, token, expires_at)
     return jsonify({"share_url": f"{settings.MINIAPP_URL}/share/{token}", "expires_at": expires_at})
 
@@ -195,8 +218,13 @@ async def download_config(token):
     if not device:
         return "Ссылка истекла или недействительна", 404
     response = app.response_class(response=device['config_text'], status=200, mimetype='text/plain')
-    response.headers["Content-Disposition"] = f"attachment; filename={device['name']}.conf"
+    response.headers["Content-Disposition"] = f"attachment; filename={safe_config_filename(device['name'])}"
     return response
+
+
+@app.route('/healthz')
+async def healthz():
+    return jsonify({"status": "ok"})
 
 
 @app.route('/')
@@ -205,4 +233,4 @@ async def index():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)

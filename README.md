@@ -124,6 +124,19 @@
 
 ---
 
+## 🚀 Production checklist
+
+1. Скопируйте `.env.example` в `.env` и заполните боевые значения.
+2. Сгенерируйте `DB_ENCRYPTION_KEY` командой:
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+3. Запускайте Mini App только по HTTPS-домену из `MINIAPP_URL`.
+4. Для веб-приложения используйте WSGI/ASGI-сервер и reverse proxy; встроенный Flask runner оставлен только для локального запуска.
+5. Проверьте `/healthz` в мониторинге и настройте логирование через `LOG_LEVEL`.
+
+---
+
 ## 🖥 3. ЭКРАНЫ БОТА (детально)
 
 ### 3.1 Экран /start (новый пользователь)
