@@ -137,8 +137,8 @@
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
         const node = document.getElementById('qr-code');
-        // Используем сверхстабильное API картинок, которое отобразится на любом смартфоне
-        node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d.config_text)}" alt="QR Code" class="w-48 h-48 mx-auto block border rounded-xl p-1 bg-white" />`;
+        // Увеличиваем размер до 400x400, добавляем ecc=L для крупных точек и расширяем класс до w-72 h-72
+        node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(d.config_text)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
         openModal('qr-code-modal');
     }
 
