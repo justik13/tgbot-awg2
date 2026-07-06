@@ -3,10 +3,11 @@ from aiogram.types import Message, CallbackQuery
 from database import db
 from config import settings
 from bot.keyboards import get_terms_keyboard, get_main_menu_keyboard
+from aiogram.filters import Command
 
 router = Router()
 
-@router.message(commands=["start"])
+@router.message(Command("start"))
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username
