@@ -15,3 +15,18 @@ def get_main_menu_keyboard() -> InlineKeyboardBuilder:
     keyboard.button(text="📖 Помощь", callback_data="help_menu")
     keyboard.button(text="🚀 Открыть приложение", web_app=WebAppInfo(url=settings.MINIAPP_URL))
     return keyboard.adjust(1).as_markup()
+
+def get_tariffs_keyboard() -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="7 дней — 25 руб / 21 ⭐️", callback_data="tariff_7")
+    keyboard.button(text="1 мес — 90 руб / 70 ⭐️", callback_data="tariff_30")
+    keyboard.button(text="3 мес — 250 руб / 190 ⭐️", callback_data="tariff_90")
+    keyboard.button(text="← Назад", callback_data="back_to_menu")
+    return keyboard.adjust(1).as_markup()
+
+def get_payment_methods_keyboard(tariff_days: int) -> InlineKeyboardBuilder:
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="⭐️ Оплатить Звездами", callback_data=f"pay_stars_{tariff_days}")
+    keyboard.button(text="💳 Оплатить Картой (RUB)", callback_data=f"pay_rub_{tariff_days}")
+    keyboard.button(text="← Назад", callback_data="buy_subscription")
+    return keyboard.adjust(1).as_markup()
