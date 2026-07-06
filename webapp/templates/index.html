@@ -28,110 +28,121 @@
 
     <div id="qr-code-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4"><div class="w-full max-w-sm rounded-3xl bg-white p-5 text-slate-900"><h2 class="mb-2 text-xl font-bold">📱 QR-код</h2><p class="mb-4 text-sm text-slate-500">Отсканируйте в AmneziaVPN</p><div id="qr-code" class="flex justify-center"></div><button data-close="qr-code-modal" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 text-white">Закрыть</button></div></div>
     <div id="share-link-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4"><div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5"><h2 class="mb-3 text-xl font-bold">🔗 Временная ссылка</h2><input id="share-link-input" class="mb-3 w-full rounded-xl bg-slate-800 p-3" readonly><button id="copy-share-link-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать</button><button data-close="share-link-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button></div></div>
-    <div id="config-text-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4"><div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 text-slate-100"><h2 class="mb-3 text-xl font-bold">VPN Конфиг</h2><pre id="config-text" class="mb-3 w-full rounded-xl bg-slate-800 p-3 overflow-auto"></pre><button id="copy-config-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать весь текст</button><button data-close="config-text-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button></div></div>
+    <div id="config-text-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
+        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 text-slate-100">
+            <h2 class="mb-3 text-xl font-bold">📄 Текст конфигурации</h2>
+            <p class="mb-2 text-xs text-slate-400">Скопируйте текст ниже и импортируйте в AmneziaWG / WireGuard:</p>
+            <textarea id="config-text" class="mb-3 w-full h-48 rounded-xl bg-slate-800 p-3 text-xs font-mono" readonly></textarea>
+            <button id="copy-config-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать весь текст</button>
+            <button data-close="config-text-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button>
+        </div>
+    </div>
 
-<script>
-const tg = window.Telegram?.WebApp;
-const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(location.search).get('user_id');
-let selectedServerId = null;
-let dashboard = null;
+    <script>
+    const tg = window.Telegram?.WebApp;
+    const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(location.search).get('user_id');
+    let selectedServerId = null;
+    let dashboard = null;
 
-function api(path, options = {}) {
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-TG-User-Id': userId,
-        'X-Telegram-Init-Data': tg?.initData || '',
-        ...(options.headers || {})
-    };
-    return fetch(path, { ...options, headers });
-}
-
-function fmtDate(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
-function toast(text) { if (tg?.showAlert) tg.showAlert(text); else alert(text); }
-
-async function copy(text) {
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text);
-            toast('Скопировано в буфер');
-            return;
-        }
-    } catch (e) {}
-    
-    const el = document.createElement('textarea');
-    el.value = text;
-    el.setAttribute('readonly', '');
-    el.style.position = 'absolute';
-    el.style.left = '-9999px';
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    toast('Скопировано (совместимый режим)');
-}
-
-async function downloadConfig(id) {
-    const d = dashboard.devices.find(x => x.id === id);
-    const blob = new Blob([d.config_text], {type: 'text/plain'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${d.name}.conf`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-
-    // Проверка, если скачивание не сработало или на мобильном устройстве
-    if (!a.download || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        document.getElementById('config-text').textContent = d.config_text;
-        openModal('config-text-modal');
+    function api(path, options = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-TG-User-Id': userId,
+            'X-Telegram-Init-Data': tg?.initData || '',
+            ...(options.headers || {})
+        };
+        return fetch(path, { ...options, headers });
     }
-}
 
-function showQr(text) {
-    const node = document.getElementById('qr-code');
-    node.innerHTML = '';
-    new QRCode(node, text);
-    openModal('qr-code-modal');
-}
+    function fmtDate(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
+    function toast(text) { if (tg?.showAlert) tg.showAlert(text); else alert(text); }
 
-async function shareDevice(id) {
-    const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json();
-    document.getElementById('share-link-input').value = data.share_url;
-    openModal('share-link-modal');
-}
+    async function copy(text) {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                toast('Скопировано в буфер');
+                return;
+            }
+        } catch (e) {}
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        toast('Скопировано в буфер');
+    }
 
-async function renameDevice(id, oldName) {
-    const name = prompt('Новое название устройства', oldName);
-    if (!name) return;
-    await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})});
-    await loadDashboard();
-}
+    async function loadDashboard() {
+        if (!userId) return toast('User ID is required');
+        tg?.ready(); tg?.expand();
+        const res = await api('/api/dashboard');
+        if (!res.ok) return toast('Откройте бота и нажмите /start');
+        dashboard = await res.json();
+        renderDashboard();
+    }
 
-async function deleteDevice(id) {
-    if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return;
-    await api(`/api/devices/${id}`, {method:'DELETE'});
-    await loadDashboard();
-}
+    function renderDashboard() {
+        const devices = dashboard.devices || [];
+        document.getElementById('subscription-card').innerHTML = `<h2 class="mb-3 font-semibold">📊 Ваша подписка</h2><p>Статус: ${dashboard.subscription_active ? '✅ Активна' : '❌ Неактивна'}</p><p>До: ${fmtDate(dashboard.subscription_expires_at)}</p>`;
+        document.getElementById('devices-title').textContent = `Устройства (${devices.length}/${dashboard.device_limit})`;
+        document.getElementById('limit-pill').textContent = devices.length >= dashboard.device_limit ? 'Лимит достигнут' : 'Можно добавить';
+        document.getElementById('empty-state').classList.toggle('hidden', devices.length !== 0);
+        const add = document.getElementById('add-device-button');
+        add.disabled = !dashboard.subscription_active || devices.length >= dashboard.device_limit;
+        add.classList.toggle('opacity-50', add.disabled);
+        document.getElementById('device-cards').innerHTML = devices.map(d => `<article class="rounded-3xl bg-slate-900 p-4"><div class="mb-3 flex justify-between"><div><p class="text-lg font-bold">${d.server_flag || '🌐'} ${d.server_name || 'Сервер'}</p><p class="text-slate-300">${d.name}</p><p class="text-xs text-slate-500">Создано: ${fmtDate(d.created_at)}</p></div><button onclick="renameDevice(${d.id}, '${d.name.replace(/'/g, "")}')">✏️</button></div><div class="grid grid-cols-2 gap-2"><button onclick="copy(\`${d.config_text}\`)" class="rounded-xl bg-slate-800 p-3">📋 Ключ</button><button onclick="downloadConfig(${d.id})" class="rounded-xl bg-slate-800 p-3">⬇️ Конфиг</button><button onclick="showQr(\`${d.config_text}\`)" class="rounded-xl bg-slate-800 p-3">📱 QR</button><button onclick="shareDevice(${d.id})" class="rounded-xl bg-slate-800 p-3">🔗 1 час</button></div><button onclick="deleteDevice(${d.id})" class="mt-2 w-full rounded-xl bg-red-500/20 p-3 text-red-200">🗑 Удалить</button></article>`).join('');
+    }
 
-document.getElementById('add-device-button').onclick = async () => {
-    await loadServers();
-    openModal('add-device-modal');
-};
+    async function loadServers() { 
+        const servers = await (await api('/api/servers')).json(); 
+        const box = document.getElementById('server-list'); 
+        box.innerHTML = servers.map(s => `<button data-server="${s.id}" class="server-btn w-full rounded-2xl border border-slate-700 p-4 text-left">${s.flag || '🌐'} ${s.name} <span class="text-sm text-slate-400">${s.bandwidth_label || ''} ${s.online ? '● online' : '● offline'}</span></button>`).join(''); 
+        box.querySelectorAll('.server-btn').forEach(b => b.onclick = () => { 
+            selectedServerId = b.dataset.server; 
+            box.querySelectorAll('button').forEach(x => x.classList.remove('border-cyan-400')); 
+            b.classList.add('border-cyan-400'); 
+        }); 
+    }
 
-document.getElementById('create-device-button').onclick = async () => {
-    const name = document.getElementById('device-name').value.trim();
-    if (!selectedServerId || !name) return toast('Выберите сервер и введите название');
-    const res = await api('/api/devices', {method:'POST', body: JSON.stringify({server_id:selectedServerId, name})});
-    if (!res.ok) return toast((await res.json()).error || 'Ошибка создания');
-    closeModal('add-device-modal');
-    await loadDashboard();
-};
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
 
-document.getElementById('refresh-button').onclick = loadDashboard;
-document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
-document.getElementById('copy-config-button').onclick = () => copy(document.getElementById('config-text').textContent);
-document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+    function showQr(text) { 
+        const node = document.getElementById('qr-code'); 
+        node.innerHTML = ''; 
+        openModal('qr-code-modal'); 
+        new QRCode(node, { text: text, width: 200, height: 200 }); 
+    }
 
-loadDashboard();
-</script>
+    function downloadConfig(id) { 
+        const d = dashboard.devices.find(x => x.id === id); 
+        try {
+            const blob = new Blob([d.config_text], {type: 'text/plain'}); 
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `${d.name}.conf`; 
+            a.click(); 
+            URL.revokeObjectURL(a.href); 
+        } catch (e) {}
+        document.getElementById('config-text').value = d.config_text; 
+        openModal('config-text-modal'); 
+    }
+
+    async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
+    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return; await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
+    async function deleteDevice(id) { if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return; await api(`/api/devices/${id}`, {method:'DELETE'}); await loadDashboard(); }
+
+    document.getElementById('refresh-button').onclick = loadDashboard;
+    document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
+    document.getElementById('copy-config-button').onclick = () => copy(document.getElementById('config-text').value);
+    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+
+    loadDashboard();
+    </script>
 </body>
 </html>
