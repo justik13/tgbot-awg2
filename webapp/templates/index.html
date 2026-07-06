@@ -35,7 +35,7 @@ const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(location.sear
 let selectedServerId = null;
 let dashboard = null;
 
-function api(path, options = {}) { return fetch(path, { ...options, headers: { 'Content-Type': 'application/json', 'X-TG-User-Id': userId, ...(options.headers || {}) } }); }
+function api(path, options = {}) { return fetch(path, { ...options, headers: { 'Content-Type': 'application/json', 'X-TG-User-Id': userId, 'X-Telegram-Init-Data': tg?.initData || '', ...(options.headers || {}) } }); }
 function fmtDate(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
 function toast(text) { if (tg?.showAlert) tg.showAlert(text); else alert(text); }
 async function copy(text) { await navigator.clipboard.writeText(text); toast('Скопировано'); }
