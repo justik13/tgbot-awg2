@@ -50,7 +50,8 @@ async def callback_admin_servers(callback: CallbackQuery):
     keyboard = InlineKeyboardBuilder()
     
     for server in servers:
-        status = "online" if (await AmneziaClient(server['api_url'], server['api_key']).check_status()) else "offline"
+        server_status = await AmneziaClient(server['api_url'], server['api_key']).check_status()
+        status = "online" if server_status['online'] else "offline"
         keyboard.button(text=f"{server['name']} ({status})", callback_data=f"admin_server_{server['id']}")
     
     keyboard.button(text="➕ Добавить сервер", callback_data="add_server")
@@ -65,7 +66,8 @@ async def callback_admin_server(callback: CallbackQuery):
     server_id = int(callback.data.split('_')[2])
     server = await db.get_server(server_id)
     
-    status = "online" if (await AmneziaClient(server['api_url'], server['api_key']).check_status()) else "offline"
+    server_status = await AmneziaClient(server['api_url'], server['api_key']).check_status()
+    status = "online" if server_status['online'] else "offline"
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="Вкл/Выкл", callback_data=f"toggle_server_{server_id}")
     keyboard.button(text="Удалить", callback_data=f"delete_server_{server_id}")
@@ -102,7 +104,7 @@ async def callback_add_server(callback: CallbackQuery):
         await callback.answer("У вас нет доступа к админке.")
         return
     
-    await callback.message.answer("Введите данные сервера в формате: Имя|API_URL|API_KEY")
+    await callback.message.answer("Введите данные сервера в формате: Имя|API_URL|API_KEY|Флаг|Канал (последние два поля можно не указывать)")
 
 @router.message(F.text)
 async def handle_add_server(message: Message):
@@ -111,11 +113,13 @@ async def handle_add_server(message: Message):
         return
     
     parts = message.text.split('|')
-    if len(parts) != 3:
+    if len(parts) not in (3, 5):
         await message.answer("Неверный формат. Попробуйте снова.")
         return
-    
-    name, api_url, api_key = parts
-    await db.add_server(name, api_url, api_key)
+
+    name, api_url, api_key = [part.strip() for part in parts[:3]]
+    flag = parts[3].strip() if len(parts) == 5 else '🌐'
+    bandwidth_label = parts[4].strip() if len(parts) == 5 else ''
+    await db.add_server(name, api_url, api_key, flag=flag, bandwidth_label=bandwidth_label)
     
     await message.answer("Сервер успешно добавлен!")

@@ -12,9 +12,10 @@ async def sub_checker_worker():
     while True:
         await asyncio.sleep(3600)
         
-        users = await db.connection.execute('''
+        cursor = await db.connection.execute('''
             SELECT * FROM users WHERE subscription_expires_at IS NOT NULL AND subscription_expires_at < ?
-        ''', ((datetime.datetime.now() - datetime.timedelta(hours=12)).isoformat(),)).fetchall()
+        ''', ((datetime.datetime.now() - datetime.timedelta(hours=12)).isoformat(),))
+        users = await cursor.fetchall()
         
         for user in users:
             devices = await db.get_user_devices(user['id'])

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конфиг устройства</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 p-4 text-slate-100">
+    <main class="mx-auto max-w-md rounded-3xl bg-slate-900 p-5">
+        <h1 class="text-2xl font-bold">{{ device.server_flag or '🌐' }} {{ device.server_name }} — {{ device.name }}</h1>
+        <p class="mt-2 text-slate-400">Ссылка временная. Скопируйте ключ или скачайте конфиг.</p>
+        <pre id="config" class="my-4 max-h-48 overflow-auto rounded-2xl bg-slate-950 p-3 text-xs">{{ device.config_text }}</pre>
+        <div id="qr" class="mb-4 flex justify-center rounded-2xl bg-white p-4"></div>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('config').textContent); alert('Скопировано')" class="mb-2 w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">📋 Скопировать ключ</button>
+        <a href="{{ request.path }}/download" class="block w-full rounded-2xl bg-slate-800 p-3 text-center">⬇️ Скачать конфиг</a>
+    </main>
+    <script>new QRCode(document.getElementById('qr'), document.getElementById('config').textContent)</script>
+</body>
+</html>
