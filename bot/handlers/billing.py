@@ -1,7 +1,7 @@
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, PreCheckoutQuery, LabeledPrice
 from database import db
-from bot.keyboards import get_tariffs_keyboard, get_payment_methods_keyboard
+from bot.keyboards import get_tariffs_keyboard, get_payment_methods_keyboard, get_main_menu_keyboard
 
 router = Router()
 
