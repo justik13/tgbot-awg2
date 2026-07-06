@@ -22,6 +22,8 @@ class DatabaseCore:
     async def connect(self):
         self.connection = await aiosqlite.connect(self.db_path)
         await self.connection.execute("PRAGMA foreign_keys = ON;")
+        await self.connection.execute("PRAGMA journal_mode=WAL;")
+        await self.connection.execute("PRAGMA synchronous=NORMAL;")
         self.connection.row_factory = aiosqlite.Row
 
     async def disconnect(self):

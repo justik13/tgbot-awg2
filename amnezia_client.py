@@ -11,6 +11,7 @@ RETRY_DELAY = 1.5
 
 class AmneziaClient:
     def __init__(self, base_url: str, api_key: str, protocol: str = "amneziawg2"):
+        self._session = None
         self.base_url = base_url.rstrip("/")
         self.api_key  = api_key
         self.protocol = protocol
@@ -23,6 +24,7 @@ class AmneziaClient:
         }
 
     async def _request(self, method: str, path: str, **kwargs) -> Optional[Any]:
+        session = await self._get_session()
         url = f"{self.base_url}{path}"
         connector = aiohttp.TCPConnector(ssl=False)
         
@@ -80,18 +82,17 @@ class AmneziaClient:
                         if peer.get("config"):
                             return peer["config"]
 
-        connector = aiohttp.TCPConnector(ssl=False)
+        session = await self._get_session()
         for path in (f"/clients/{username_or_id}/config", f"/clients/{username_or_id}"):
             try:
-                async with aiohttp.ClientSession(headers=self._get_headers(), timeout=REQUEST_TIMEOUT, connector=connector) as session:
-                    async with session.get(f"{self.base_url}{path}") as resp:
-                        if resp.status == 200:
-                            ct = resp.headers.get("Content-Type", "")
-                            if "application/json" in ct:
-                                data = await resp.json()
-                                return data.get("config") or data.get("client", {}).get("config")
-                            raw_data = await resp.read()
-                            return raw_data.decode("utf-8", errors="replace")
+                async with session.get(f"{self.base_url}{path}") as resp:
+                    if resp.status == 200:
+                        ct = resp.headers.get("Content-Type", "")
+                        if "application/json" in ct:
+                            data = await resp.json()
+                            return data.get("config") or data.get("client", {}).get("config")
+                        raw_data = await resp.read()
+                        return raw_data.decode("utf-8", errors="replace")
             except Exception as e:
                 logger.debug("Fallback %s: %s", path, e)
         return None
