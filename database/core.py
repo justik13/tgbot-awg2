@@ -1,6 +1,7 @@
 import aiosqlite
 from cryptography.fernet import Fernet
 
+
 class DatabaseCore:
     def __init__(self, db_path: str, encryption_key: str):
         self.db_path = db_path
@@ -44,6 +45,9 @@ class DatabaseCore:
                 name TEXT,
                 api_url TEXT,
                 api_key TEXT,
+                country_code TEXT DEFAULT '',
+                flag TEXT DEFAULT '🌐',
+                bandwidth_label TEXT DEFAULT '',
                 is_active INTEGER DEFAULT 1
             )
         ''')
@@ -69,4 +73,13 @@ class DatabaseCore:
                 FOREIGN KEY(device_id) REFERENCES devices(id) ON DELETE CASCADE
             )
         ''')
+        await self._ensure_column("servers", "country_code", "TEXT DEFAULT ''")
+        await self._ensure_column("servers", "flag", "TEXT DEFAULT '🌐'")
+        await self._ensure_column("servers", "bandwidth_label", "TEXT DEFAULT ''")
         await self.connection.commit()
+
+    async def _ensure_column(self, table: str, column: str, definition: str):
+        cursor = await self.connection.execute(f"PRAGMA table_info({table})")
+        columns = [row[1] for row in await cursor.fetchall()]
+        if column not in columns:
+            await self.connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
