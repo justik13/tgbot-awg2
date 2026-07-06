@@ -72,10 +72,7 @@
             `;
 
             // Fetch devices list
-            const devicesResponse = await fetch('/api/devices', {
-                headers: { 'X-TG-User-Id': user_id }
-            });
-            const devicesData = await devicesResponse.json();
+            const devicesData = subscriptionData.devices;
             if (devicesData.length === 0) {
                 document.getElementById('no-devices-message').textContent = 'У вас пока нет устройств';
             } else {
