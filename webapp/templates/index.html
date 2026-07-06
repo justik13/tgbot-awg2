@@ -137,34 +137,30 @@
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
         const node = document.getElementById('qr-code');
-        node.innerHTML = '';
+        // Используем сверхстабильное API картинок, которое отобразится на любом смартфоне
+        node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d.config_text)}" alt="QR Code" class="w-48 h-48 mx-auto block border rounded-xl p-1 bg-white" />`;
         openModal('qr-code-modal');
-        new QRCode(node, { text: d.config_text, width: 200, height: 200 });
     }
 
     function downloadConfig(id) {
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
 
-        // Если это мобилка — не пытаемся скачать, сразу кидаем в текстовую модалку
-        if (tg && tg.platform !== 'desktop' && tg.platform !== 'macos') {
-            document.getElementById('config-text').value = d.config_text;
-            openModal('config-text-modal');
-            return;
-        }
-
-        // Логика скачивания файла (только для ПК)
-        try {
-            const blob = new Blob([d.config_text], {type: 'text/plain'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${d.name}.conf`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        } catch (e) {}
-
+        // На любых платформах сначала выводим текст конфигурации в модалку, чтобы застраховать мобильных юзеров
         document.getElementById('config-text').value = d.config_text;
         openModal('config-text-modal');
+
+        // Для десктопных версий параллельно запускаем фоновое скачивание файла .conf
+        if (!tg || tg.platform === 'desktop' || tg.platform === 'macos' || tg.platform === 'web') {
+            try {
+                const blob = new Blob([d.config_text], {type: 'text/plain'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${d.name}.conf`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {}
+        }
     }
 
     async function loadDashboard() {
