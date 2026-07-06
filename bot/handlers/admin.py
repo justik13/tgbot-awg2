@@ -10,11 +10,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 router = Router()
 
 @router.message(Command("admin"))
-async def cmd_admin(message: Message):
+async def cmd_admin(message: Message, bot: Bot):
     if message.from_user.id not in settings.ADMIN_IDS:
         await message.answer("У вас нет доступа к админке.")
         return
-    
+
     cursor = await db.connection.execute('SELECT COUNT(*) FROM users')
     row = await cursor.fetchone()
     user_count = row[0] if row else 0
@@ -28,14 +28,14 @@ async def cmd_admin(message: Message):
     cursor = await db.connection.execute('SELECT COUNT(*) FROM devices')
     row = await cursor.fetchone()
     total_devices_count = row[0] if row else 0
-    
+
     admin_text = (
         f"Админка\n"
         f"Количество пользователей: {user_count}\n"
         f"Количество активных подписок: {active_subscriptions_count}\n"
         f"Общее количество устройств: {total_devices_count}"
     )
-    
+
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="🖥 Управление серверами", callback_data="admin_servers")
     await message.answer(admin_text, reply_markup=keyboard.as_markup())
