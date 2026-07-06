@@ -4,6 +4,7 @@ import datetime
 from config import settings
 from database import db
 from amnezia_client import AmneziaClient
+from webapp.security import telegram_auth_required
 
 app = Flask(__name__)
 
@@ -26,6 +27,7 @@ async def before_request():
 
 
 @app.route('/api/dashboard', methods=['GET'])
+@telegram_auth_required
 async def get_dashboard():
     user_id = get_tg_user_id(request)
     if not user_id:
@@ -45,6 +47,7 @@ async def get_dashboard():
 
 
 @app.route('/api/servers', methods=['GET'])
+@telegram_auth_required
 async def get_servers():
     servers = await db.get_active_servers()
     payload = []
@@ -62,6 +65,7 @@ async def get_servers():
 
 
 @app.route('/api/devices', methods=['POST'])
+@telegram_auth_required
 async def create_device():
     user_id = get_tg_user_id(request)
     if not user_id:
@@ -95,6 +99,7 @@ async def create_device():
 
 
 @app.route('/api/devices/<int:device_id>', methods=['PATCH'])
+@telegram_auth_required
 async def rename_device(device_id):
     user_id = get_tg_user_id(request)
     device = await db.get_device(device_id)
@@ -109,6 +114,7 @@ async def rename_device(device_id):
 
 
 @app.route('/api/devices/<int:device_id>', methods=['DELETE'])
+@telegram_auth_required
 async def delete_device(device_id):
     user_id = get_tg_user_id(request)
     device = await db.get_device(device_id)
@@ -123,6 +129,7 @@ async def delete_device(device_id):
 
 
 @app.route('/api/devices/<int:device_id>/share', methods=['POST'])
+@telegram_auth_required
 async def share_device(device_id):
     user_id = get_tg_user_id(request)
     device = await db.get_device(device_id)
