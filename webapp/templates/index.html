@@ -26,24 +26,8 @@
         <div class="mx-auto w-full max-w-xl rounded-3xl bg-slate-900 p-5"><h2 class="mb-4 text-xl font-bold">← Новое устройство</h2><label class="text-sm text-slate-400">Выберите сервер</label><div id="server-list" class="my-3 space-y-2"></div><label class="text-sm text-slate-400">Название устройства</label><input id="device-name" class="mt-2 w-full rounded-2xl bg-slate-800 p-4 outline-none" placeholder="📱 iPhone, 💻 Laptop"><div class="mt-4 grid grid-cols-2 gap-2"><button data-close="add-device-modal" class="rounded-2xl bg-slate-800 p-4">Отмена</button><button id="create-device-button" class="rounded-2xl bg-cyan-400 p-4 font-bold text-slate-950">Создать</button></div></div>
     </div>
 
-    <div id="qr-code-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
-        <div class="w-full max-w-sm rounded-3xl bg-white p-5 text-slate-900">
-            <h2 class="mb-2 text-xl font-bold">📱 QR-код</h2>
-            <p class="mb-4 text-sm text-slate-500">Отсканируйте в AmneziaVPN</p>
-            <div id="qr-code" class="flex justify-center"></div>
-            <button data-close="qr-code-modal" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 text-white">Закрыть</button>
-        </div>
-    </div>
-
-    <div id="share-link-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
-        <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5">
-            <h2 class="mb-3 text-xl font-bold">🔗 Временная ссылка</h2>
-            <input id="share-link-input" class="mb-3 w-full rounded-xl bg-slate-800 p-3" readonly>
-            <button id="copy-share-link-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать</button>
-            <button data-close="share-link-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button>
-        </div>
-    </div>
-
+    <div id="qr-code-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4"><div class="w-full max-w-sm rounded-3xl bg-white p-5 text-slate-900"><h2 class="mb-2 text-xl font-bold">📱 QR-код</h2><p class="mb-4 text-sm text-slate-500">Отсканируйте в AmneziaVPN</p><div id="qr-code" class="flex justify-center"></div><button data-close="qr-code-modal" class="mt-4 w-full rounded-2xl bg-slate-900 p-3 text-white">Закрыть</button></div></div>
+    <div id="share-link-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4"><div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5"><h2 class="mb-3 text-xl font-bold">🔗 Временная ссылка</h2><input id="share-link-input" class="mb-3 w-full rounded-xl bg-slate-800 p-3" readonly><button id="copy-share-link-button" class="w-full rounded-2xl bg-cyan-400 p-3 font-bold text-slate-950">Скопировать</button><button data-close="share-link-modal" class="mt-2 w-full rounded-2xl bg-slate-800 p-3">Закрыть</button></div></div>
     <div id="config-text-modal" class="fixed inset-0 hidden items-center justify-center bg-black/70 p-4 z-50">
         <div class="w-full max-w-sm rounded-3xl bg-slate-900 p-5 text-slate-100">
             <h2 class="mb-3 text-xl font-bold">📄 Текст конфигурации</h2>
@@ -93,35 +77,6 @@
         toast('Скопировано в буфер');
     }
 
-    async function copyConfig(id) {
-        const d = dashboard.devices.find(x => x.id === id);
-        if (d) await copy(d.config_text);
-    }
-
-    function showQr(id) {
-        const d = dashboard.devices.find(x => x.id === id);
-        if (!d) return;
-        const node = document.getElementById('qr-code');
-        node.innerHTML = '';
-        openModal('qr-code-modal');
-        new QRCode(node, { text: d.config_text, width: 200, height: 200 });
-    }
-
-    function downloadConfig(id) {
-        const d = dashboard.devices.find(x => x.id === id);
-        if (!d) return;
-        try {
-            const blob = new Blob([d.config_text], {type: 'text/plain'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${d.name}.conf`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        } catch (e) {}
-        document.getElementById('config-text').value = d.config_text;
-        openModal('config-text-modal');
-    }
-
     async function loadDashboard() {
         if (!userId) return toast('User ID is required');
         tg?.ready(); tg?.expand();
@@ -157,9 +112,43 @@
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
 
+    async function copyConfig(id) {
+        const d = dashboard.devices.find(x => x.id === id);
+        if (d) await copy(d.config_text);
+    }
+
+    function showQr(id) { 
+        const d = dashboard.devices.find(x => x.id === id);
+        if (!d) return;
+        const node = document.getElementById('qr-code'); 
+        node.innerHTML = ''; 
+        openModal('qr-code-modal'); 
+        new QRCode(node, { text: d.config_text, width: 200, height: 200 }); 
+    }
+
+    function downloadConfig(id) { 
+        const d = dashboard.devices.find(x => x.id === id); 
+        if (!d) return;
+        try {
+            const blob = new Blob([d.config_text], {type: 'text/plain'}); 
+            const a = document.createElement('a'); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = `${d.name}.conf`; 
+            a.click(); 
+            URL.revokeObjectURL(a.href); 
+        } catch (e) {}
+        document.getElementById('config-text').value = d.config_text; 
+        openModal('config-text-modal'); 
+    }
+
     async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
-    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return; await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
+    async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return toast('Выберите сервер и введите название'); await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
     async function deleteDevice(id) { if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return; await api(`/api/devices/${id}`, {method:'DELETE'}); await loadDashboard(); }
+
+    document.getElementById('refresh-button').onclick = loadDashboard;
+    document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
+    document.getElementById('copy-config-button').onclick = () => copy(document.getElementById('config-text').value);
+    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
 
     if (document.getElementById('add-device-button')) {
         document.getElementById('add-device-button').onclick = async () => {
@@ -178,11 +167,6 @@
             await loadDashboard();
         };
     }
-
-    document.getElementById('refresh-button').onclick = loadDashboard;
-    document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
-    document.getElementById('copy-config-button').onclick = () => copy(document.getElementById('config-text').value);
-    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
 
     loadDashboard();
     </script>
