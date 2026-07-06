@@ -45,10 +45,14 @@ async def get_dashboard():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    from webapp.vpn_encoder import encode_amnezia_config
     devices = await db.get_user_devices(user_id)
     for d in devices:
-        d['amnezia_qr'] = encode_amnezia_config(d['config_text'])
+        server = await db.get_server(d['server_id'])
+        if server:
+            client = get_amnezia_client(server)
+            qr_res = await client.get_native_qr(d['config_text'])
+            if qr_res and qr_res.get('items'):
+                d['amnezia_qr'] = qr_res['items'][0]
 
     return jsonify({
         "subscription_expires_at": user['subscription_expires_at'],
@@ -107,11 +111,14 @@ async def create_device():
     if not config_text:
         return jsonify({"error": "Failed to create VPN profile"}), 500
 
-    from webapp.vpn_encoder import encode_amnezia_config
     device_id = await db.add_device(user_id, server['id'], name, amnezia_client_id, config_text)
     device = await db.get_device(device_id)
-    # Добавляем упакованный QR-код в ответ
-    device['amnezia_qr'] = encode_amnezia_config(device['config_text'])
+    
+    client = get_amnezia_client(server)
+    qr_res = await client.get_native_qr(device['config_text'])
+    if qr_res and qr_res.get('items'):
+        device['amnezia_qr'] = qr_res['items'][0]
+        
     return jsonify({"status": "Device created successfully", "device": device}), 201
 
 
