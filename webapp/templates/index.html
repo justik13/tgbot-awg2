@@ -35,7 +35,16 @@ const userId = tg?.initDataUnsafe?.user?.id || new URLSearchParams(location.sear
 let selectedServerId = null;
 let dashboard = null;
 
-function api(path, options = {}) { return fetch(path, { ...options, headers: { 'Content-Type': 'application/json', 'X-TG-User-Id': userId, 'X-Telegram-Init-Data': tg?.initData || '', ...(options.headers || {}) } }); }
+function api(path, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-TG-User-Id': userId,
+        'X-Telegram-Init-Data': tg?.initData || '',
+        ...(options.headers || {})
+    };
+    return fetch(path, { ...options, headers });
+}
+
 function fmtDate(value) { return value ? new Date(value).toLocaleDateString('ru-RU') : '—'; }
 function toast(text) { if (tg?.showAlert) tg.showAlert(text); else alert(text); }
 async function copy(text) { await navigator.clipboard.writeText(text); toast('Скопировано'); }
@@ -48,6 +57,7 @@ async function loadDashboard() {
     dashboard = await res.json();
     renderDashboard();
 }
+
 function renderDashboard() {
     const devices = dashboard.devices || [];
     document.getElementById('subscription-card').innerHTML = `<h2 class="mb-3 font-semibold">📊 Ваша подписка</h2><p>Статус: ${dashboard.subscription_active ? '✅ Активна' : '❌ Неактивна'}</p><p>До: ${fmtDate(dashboard.subscription_expires_at)}</p>`;
@@ -59,20 +69,75 @@ function renderDashboard() {
     add.classList.toggle('opacity-50', add.disabled);
     document.getElementById('device-cards').innerHTML = devices.map(d => `<article class="rounded-3xl bg-slate-900 p-4"><div class="mb-3 flex justify-between"><div><p class="text-lg font-bold">${d.server_flag || '🌐'} ${d.server_name || 'Сервер'}</p><p class="text-slate-300">${d.name}</p><p class="text-xs text-slate-500">Создано: ${fmtDate(d.created_at)}</p></div><button onclick="renameDevice(${d.id}, '${d.name.replace(/'/g, '')}')">✏️</button></div><div class="grid grid-cols-2 gap-2"><button onclick="copy(${JSON.stringify(d.config_text)})" class="rounded-xl bg-slate-800 p-3">📋 Ключ</button><button onclick="downloadConfig(${d.id})" class="rounded-xl bg-slate-800 p-3">⬇️ Конфиг</button><button onclick="showQr(${JSON.stringify(d.config_text)})" class="rounded-xl bg-slate-800 p-3">📱 QR</button><button onclick="shareDevice(${d.id})" class="rounded-xl bg-slate-800 p-3">🔗 1 час</button></div><button onclick="deleteDevice(${d.id})" class="mt-2 w-full rounded-xl bg-red-500/20 p-3 text-red-200">🗑 Удалить</button></article>`).join('');
 }
-async function loadServers() { const servers = await (await api('/api/servers')).json(); const box = document.getElementById('server-list'); box.innerHTML = servers.map(s => `<button data-server="${s.id}" class="server-btn w-full rounded-2xl border border-slate-700 p-4 text-left">${s.flag || '🌐'} ${s.name} <span class="text-sm text-slate-400">${s.bandwidth_label || ''} ${s.online ? '● online' : '● offline'}</span></button>`).join(''); box.querySelectorAll('.server-btn').forEach(b => b.onclick = () => { selectedServerId = b.dataset.server; box.querySelectorAll('button').forEach(x => x.classList.remove('border-cyan-400')); b.classList.add('border-cyan-400'); }); }
+
+async function loadServers() {
+    const servers = await (await api('/api/servers')).json();
+    const box = document.getElementById('server-list');
+    box.innerHTML = servers.map(s => `<button data-server="${s.id}" class="server-btn w-full rounded-2xl border border-slate-700 p-4 text-left">${s.flag || '🌐'} ${s.name} <span class="text-sm text-slate-400">${s.bandwidth_label || ''} ${s.online ? '● online' : '● offline'}</span></button>`).join('');
+    box.querySelectorAll('.server-btn').forEach(b => b.onclick = () => {
+        selectedServerId = b.dataset.server;
+        box.querySelectorAll('button').forEach(x => x.classList.remove('border-cyan-400'));
+        b.classList.add('border-cyan-400');
+    });
+}
+
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
-function showQr(text) { const node = document.getElementById('qr-code'); node.innerHTML = ''; openModal('qr-code-modal'); new QRCode(node, text); }
-function downloadConfig(id) { const d = dashboard.devices.find(x => x.id === id); const blob = new Blob([d.config_text], {type: 'text/plain'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${d.name}.conf`; a.click(); URL.revokeObjectURL(a.href); }
-async function shareDevice(id) { const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json(); document.getElementById('share-link-input').value = data.share_url; openModal('share-link-modal'); }
-async function renameDevice(id, oldName) { const name = prompt('Новое название устройства', oldName); if (!name) return; await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})}); await loadDashboard(); }
-async function deleteDevice(id) { if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return; await api(`/api/devices/${id}`, {method:'DELETE'}); await loadDashboard(); }
 
-document.getElementById('add-device-button').onclick = async () => { await loadServers(); openModal('add-device-modal'); };
-document.getElementById('create-device-button').onclick = async () => { const name = document.getElementById('device-name').value.trim(); if (!selectedServerId || !name) return toast('Выберите сервер и введите название'); const res = await api('/api/devices', {method:'POST', body: JSON.stringify({server_id:selectedServerId, name})}); if (!res.ok) return toast((await res.json()).error || 'Ошибка создания'); closeModal('add-device-modal'); await loadDashboard(); };
+function showQr(text) {
+    const node = document.getElementById('qr-code');
+    node.innerHTML = '';
+    openModal('qr-code-modal');
+    new QRCode(node, text);
+}
+
+function downloadConfig(id) {
+    const d = dashboard.devices.find(x => x.id === id);
+    const blob = new Blob([d.config_text], {type: 'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${d.name}.conf`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+async function shareDevice(id) {
+    const data = await (await api(`/api/devices/${id}/share`, {method:'POST'})).json();
+    document.getElementById('share-link-input').value = data.share_url;
+    openModal('share-link-modal');
+}
+
+async function renameDevice(id, oldName) {
+    const name = prompt('Новое название устройства', oldName);
+    if (!name) return;
+    await api(`/api/devices/${id}`, {method:'PATCH', body: JSON.stringify({name})});
+    await loadDashboard();
+}
+
+async function deleteDevice(id) {
+    if (!confirm('Удалить устройство? Это действие нельзя отменить.')) return;
+    await api(`/api/devices/${id}`, {method:'DELETE'});
+    await loadDashboard();
+}
+
+document.getElementById('add-device-button').onclick = async () => {
+    await loadServers();
+    openModal('add-device-modal');
+};
+
+document.getElementById('create-device-button').onclick = async () => {
+    const name = document.getElementById('device-name').value.trim();
+    if (!selectedServerId || !name) return toast('Выберите сервер и введите название');
+    const res = await api('/api/devices', {method:'POST', body: JSON.stringify({server_id:selectedServerId, name})});
+    if (!res.ok) return toast((await res.json()).error || 'Ошибка создания');
+    closeModal('add-device-modal');
+    await loadDashboard();
+};
+
 document.getElementById('refresh-button').onclick = loadDashboard;
 document.getElementById('copy-share-link-button').onclick = () => copy(document.getElementById('share-link-input').value);
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => closeModal(b.dataset.close));
+
 loadDashboard();
 </script>
 </body>
