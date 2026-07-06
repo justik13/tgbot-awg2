@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import uuid
 import datetime
+import traceback
 from config import settings
 from database import db
 from amnezia_client import AmneziaClient
@@ -72,7 +73,13 @@ async def create_device():
     if not config_text:
         return jsonify({"error": "Failed to create VPN profile"}), 500
     
-    await db.add_device(user_id, server_id, name, amnezia_client_id, config_text)
+    try:
+        await db.add_device(user_id, server_id, name, amnezia_client_id, config_text)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
+    
     return jsonify({"status": "Device created successfully"})
 
 @app.route('/api/devices/<int:device_id>', methods=['DELETE'])
