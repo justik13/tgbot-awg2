@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import uuid
 import datetime
 from config import settings
@@ -122,6 +122,10 @@ async def download_config(token):
     )
     response.headers["Content-Disposition"] = f"attachment; filename=device_config.conf"
     return response
+
+@app.route('/')
+async def index():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5000)

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini App</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto p-4">
+        <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+
+        <!-- Subscription Status -->
+        <div id="subscription-status" class="bg-white rounded-lg shadow-md p-4 mb-4"></div>
+
+        <!-- Devices List -->
+        <div id="devices-list" class="bg-white rounded-lg shadow-md p-4">
+            <h2 class="text-xl font-bold mb-4">Устройства</h2>
+            <div id="no-devices-message" class="text-center text-gray-500"></div>
+            <div id="device-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Add Device Button -->
+        <button id="add-device-button" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">+ Добавить устройство</button>
+
+        <!-- Modal for Adding Device -->
+        <div id="add-device-modal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+            <div class="bg-white p-6 rounded-lg w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Добавить устройство</h2>
+                <select id="server-select" class="w-full p-2 mb-4"></select>
+                <input type="text" id="device-name" placeholder="Название устройства" class="w-full p-2 mb-4">
+                <button id="create-device-button" class="bg-green-500 text-white px-4 py-2 rounded">Создать устройство</button>
+            </div>
+        </div>
+
+        <!-- Modal for QR Code -->
+        <div id="qr-code-modal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+            <div class="bg-white p-6 rounded-lg w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">QR-код</h2>
+                <div id="qr-code" class="mb-4"></div>
+                <button id="close-qr-code-modal" class="bg-red-500 text-white px-4 py-2 rounded">Закрыть</button>
+            </div>
+        </div>
+
+        <!-- Modal for Sharing Link -->
+        <div id="share-link-modal" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75 hidden">
+            <div class="bg-white p-6 rounded-lg w-full max-w-md">
+                <h2 class="text-xl font-bold mb-4">Ссылка для шеринга</h2>
+                <input type="text" id="share-link-input" class="w-full p-2 mb-4" readonly>
+                <button id="copy-share-link-button" class="bg-blue-500 text-white px-4 py-2 rounded">Скопировать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user_id = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || new URLSearchParams(window.location.search).get('user_id');
+            if (!user_id) {
+                alert('User ID is required');
+                return;
+            }
+
+            // Fetch subscription status
+            const subscriptionResponse = await fetch('/api/dashboard', {
+                headers: { 'X-TG-User-Id': user_id }
+            });
+            const subscriptionData = await subscriptionResponse.json();
+            document.getElementById('subscription-status').innerHTML = `
+                <p>Статус подписки: ${new Date(subscriptionData.subscription_status).toLocaleDateString()}</p>
+                <p>Лимит устройств: ${subscriptionData.device_limit}</p>
+            `;
+
+            // Fetch devices list
+            const devicesResponse = await fetch('/api/devices', {
+                headers: { 'X-TG-User-Id': user_id }
+            });
+            const devicesData = await devicesResponse.json();
+            if (devicesData.length === 0) {
+                document.getElementById('no-devices-message').textContent = 'У вас пока нет устройств';
+            } else {
+                const deviceCardsContainer = document.getElementById('device-cards');
+                devicesData.forEach(device => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow-md p-4 flex flex-col items-center';
+                    card.innerHTML = `
+                        <h3 class="text-xl font-bold">${device.name}</h3>
+                        <button class="copy-key-button bg-blue-500 text-white px-4 py-2 rounded mb-2">📋 Копировать ключ</button>
+                        <a href="/share/${device.amnezia_client_id}" download="device_config.conf" class="download-button bg-green-500 text-white px-4 py-2 rounded mb-2">⬇️ Скачать</a>
+                        <button class="qr-code-button bg-yellow-500 text-white px-4 py-2 rounded mb-2">📱 QR-код</button>
+                        <button class="share-link-button bg-purple-500 text-white px-4 py-2 rounded mb-2">🔗 Ссылка (1 час)</button>
+                        <button class="delete-button bg-red-500 text-white px-4 py-2 rounded">🗑 Удалить</button>
+                    `;
+                    deviceCardsContainer.appendChild(card);
+
+                    // Copy key functionality
+                    card.querySelector('.copy-key-button').addEventListener('click', () => {
+                        navigator.clipboard.writeText(device.config_text);
+                        alert('Ключ скопирован');
+                    });
+
+                    // QR code functionality
+                    card.querySelector('.qr-code-button').addEventListener('click', () => {
+                        document.getElementById('qr-code-modal').classList.remove('hidden');
+                        new QRCode(document.getElementById("qr-code"), device.config_text);
+                    });
+
+                    // Share link functionality
+                    card.querySelector('.share-link-button').addEventListener('click', async () => {
+                        const shareResponse = await fetch(`/api/devices/${device.id}/share`, {
+                            method: 'POST',
+                            headers: { 'X-TG-User-Id': user_id }
+                        });
+                        const shareData = await shareResponse.json();
+                        document.getElementById('share-link-input').value = shareData.share_url;
+                        document.getElementById('share-link-modal').classList.remove('hidden');
+                    });
+
+                    // Delete device functionality
+                    card.querySelector('.delete-button').addEventListener('click', async () => {
+                        if (confirm('Вы уверены, что хотите удалить это устройство?')) {
+                            await fetch(`/api/devices/${device.id}`, {
+                                method: 'DELETE',
+                                headers: { 'X-TG-User-Id': user_id }
+                            });
+                            location.reload();
+                        }
+                    });
+                });
+
+                // Disable add device button if limit is reached
+                const addDeviceButton = document.getElementById('add-device-button');
+                if (devicesData.length >= subscriptionData.device_limit) {
+                    addDeviceButton.disabled = true;
+                    addDeviceButton.textContent = 'Достигнут лимит';
+                }
+            }
+
+            // Fetch servers list for adding device
+            const serversResponse = await fetch('/api/servers', {
+                headers: { 'X-TG-User-Id': user_id }
+            });
+            const serversData = await serversResponse.json();
+            const serverSelect = document.getElementById('server-select');
+            serversData.forEach(server => {
+                const option = document.createElement('option');
+                option.value = server.id;
+                option.textContent = server.name;
+                serverSelect.appendChild(option);
+            });
+
+            // Add device button functionality
+            addDeviceButton.addEventListener('click', () => {
+                document.getElementById('add-device-modal').classList.remove('hidden');
+            });
+
+            // Create device button functionality
+            const createDeviceButton = document.getElementById('create-device-button');
+            createDeviceButton.addEventListener('click', async () => {
+                const serverId = document.getElementById('server-select').value;
+                const deviceName = document.getElementById('device-name').value;
+                if (serverId && deviceName) {
+                    await fetch('/api/devices', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-TG-User-Id': user_id },
+                        body: JSON.stringify({ server_id: serverId, name: deviceName })
+                    });
+                    location.reload();
+                } else {
+                    alert('Выберите сервер и введите название устройства');
+                }
+            });
+
+            // Close QR code modal functionality
+            document.getElementById('close-qr-code-modal').addEventListener('click', () => {
+                document.getElementById('qr-code-modal').classList.add('hidden');
+            });
+
+            // Copy share link functionality
+            document.getElementById('copy-share-link-button').addEventListener('click', () => {
+                navigator.clipboard.writeText(document.getElementById('share-link-input').value);
+                alert('Ссылка скопирована');
+            });
+        });
+    </script>
+</body>
+</html>
