@@ -45,7 +45,11 @@ async def get_dashboard():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    from webapp.vpn_encoder import encode_amnezia_config
     devices = await db.get_user_devices(user_id)
+    for d in devices:
+        d['amnezia_qr'] = encode_amnezia_config(d['config_text'])
+
     return jsonify({
         "subscription_expires_at": user['subscription_expires_at'],
         "subscription_active": is_subscription_active(user),
