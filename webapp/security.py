@@ -28,10 +28,9 @@ def verify_telegram_init_data(init_data: str) -> bool:
 
 def telegram_auth_required(f):
     @wraps(f)
-    def decorated(*args, **kwargs):
-        # Ожидаем строку авторизации в заголовке X-Telegram-Init-Data
+    async def decorated(*args, **kwargs):
         init_data = request.headers.get("X-Telegram-Init-Data")
         if not init_data or not verify_telegram_init_data(init_data):
             return jsonify({"error": "Unauthorized", "message": "Invalid Telegram InitData"}), 403
-        return f(*args, **kwargs)
+        return await f(*args, **kwargs)
     return decorated
