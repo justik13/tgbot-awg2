@@ -103,8 +103,12 @@ async def create_device():
     if not config_text:
         return jsonify({"error": "Failed to create VPN profile"}), 500
 
+    from webapp.vpn_encoder import encode_amnezia_config
     device_id = await db.add_device(user_id, server['id'], name, amnezia_client_id, config_text)
-    return jsonify({"status": "Device created successfully", "device": await db.get_device(device_id)}), 201
+    device = await db.get_device(device_id)
+    # Добавляем упакованный QR-код в ответ
+    device['amnezia_qr'] = encode_amnezia_config(device['config_text'])
+    return jsonify({"status": "Device created successfully", "device": device}), 201
 
 
 @app.route('/api/devices/<int:device_id>', methods=['PATCH'])
