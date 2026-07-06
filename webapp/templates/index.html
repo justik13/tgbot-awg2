@@ -137,13 +137,23 @@
         const d = dashboard.devices.find(x => x.id === id);
         if (!d) return;
         const node = document.getElementById('qr-code');
-        let qrData = d.amnezia_qr || d.config_text;
-        if (d.amnezia_qr) {
-            node.innerHTML = `<img src="${qrData}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
-        } else {
-            node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(qrData)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
-        }
+        node.innerHTML = '<p class="text-center">Загрузка...</p>';
         openModal('qr-code-modal');
+
+        api(`/api/devices/${id}/qr`, { method: 'GET' })
+            .then(res => {
+                if (res.ok) {
+                    return res.json();
+                } else {
+                    throw new Error('Ошибка получения QR-кода');
+                }
+            })
+            .then(data => {
+                node.innerHTML = `<img src="${data.qr_code}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+            })
+            .catch(() => {
+                node.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=L&data=${encodeURIComponent(d.config_text)}" alt="QR Code" class="w-72 h-72 mx-auto block border rounded-xl p-1 bg-white" />`;
+            });
     }
 
     function downloadConfig(id) {
